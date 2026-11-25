@@ -20,6 +20,13 @@
   .qr svg { width:80mm; height:80mm; display:block; }
   .hint { margin-top:4mm; font-size:14pt; }
   .url { margin-top:2mm; font-size:9pt; color:#999; word-break:break-all; }
+  .sheet.one { grid-template-rows:1fr; }
+  .one .card { border-width:4px; }
+  .one .tag { font-size:24pt; }
+  .one .num { font-size:110pt; margin:2mm 0 6mm; }
+  .one .qr svg { width:150mm; height:150mm; }
+  .one .hint { margin-top:6mm; font-size:20pt; }
+  .one .url { font-size:11pt; }
   @media print {
     body { background:#fff; }
     .toolbar { display:none; }
@@ -31,7 +38,8 @@
 <body>
 <div class="toolbar">
   <label>ที่อยู่เว็บ: <input type="text" id="base"></label>
-  <button onclick="window.print()">🖨️ พิมพ์ (A4 หน้าละ 2 ฐาน)</button>
+  <label>ขนาด: <select id="per"><option value="1">หน้าละ 1 ฐาน (QR ใหญ่)</option><option value="2">หน้าละ 2 ฐาน</option></select></label>
+  <button onclick="window.print()">🖨️ พิมพ์ A4</button>
 </div>
 <div id="out"></div>
 <script>
@@ -54,9 +62,10 @@ function render() {
   try { localStorage.setItem('riddleBase', baseInput.value.trim()); } catch (e) {}
   const out = document.getElementById('out');
   out.innerHTML = '';
+  const per = +document.getElementById('per').value;
   let sheet;
   for (let n = 1; n <= 20; n++) {
-    if (n % 2 === 1) { sheet = document.createElement('section'); sheet.className = 'sheet'; out.appendChild(sheet); }
+    if ((n - 1) % per === 0) { sheet = document.createElement('section'); sheet.className = per === 1 ? 'sheet one' : 'sheet'; out.appendChild(sheet); }
     const url = base + '?n=' + n;
     const card = document.createElement('div');
     card.className = 'card';
@@ -70,6 +79,7 @@ function render() {
   }
 }
 baseInput.addEventListener('input', render);
+document.getElementById('per').addEventListener('change', render);
 render();
 </script>
 </body>
