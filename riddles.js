@@ -1,5 +1,5 @@
 // ใส่ URL ของ Google Apps Script (Web app) ที่ Deploy แล้ว ระหว่างเครื่องหมาย ' '
-const API_URL = '';
+const API_URL = 'https://script.google.com/macros/s/AKfycbzJUX_x6uozaCcO2vJ3sCqVgycqMGOM57trsqzzNxeV0pW3RxTX48sfHcP1qcB3q6Td/exec';
 
 // ปริศนา 20 ข้อ + ตัวเลือก (ไม่มีเฉลยในไฟล์นี้ — เฉลยอยู่ใน Apps Script เท่านั้น)
 const QUESTIONS = [
