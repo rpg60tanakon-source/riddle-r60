@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ตารางคะแนน ปริศนาศาสตร์พระราชา</title>
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700;800&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  body { margin:0; min-height:100vh; font-family:'Sarabun',sans-serif; color:#2b2112;
+         background:linear-gradient(160deg,#fff7e0,#f3dca4); padding:24px 16px 40px; }
+  .wrap { max-width:900px; margin:0 auto; }
+  h1 { text-align:center; margin:0; font-size:clamp(26px,5vw,44px); color:#8a5a12; }
+  .sub { text-align:center; color:#8a6a2e; margin:4px 0 22px; font-size:16px; }
+  .row { display:grid; grid-template-columns:64px 1fr 150px; align-items:center; gap:12px; background:#fff; border-radius:16px;
+         padding:12px 18px; margin-bottom:10px; box-shadow:0 4px 14px rgba(120,80,10,.12); font-size:clamp(18px,3vw,26px); }
+  .rank { font-size:1.4em; font-weight:800; text-align:center; color:#a08850; }
+  .row.r1 { border:3px solid #e0b43c; } .row.r1 .rank { color:#d4a017; }
+  .row.r2 .rank { color:#8c99a6; } .row.r3 .rank { color:#b87333; }
+  .name { font-weight:700; overflow-wrap:anywhere; }
+  .time { font-size:.6em; color:#999; font-weight:400; }
+  .pts { text-align:right; font-weight:800; color:#2f8a4a; font-size:1.3em; }
+  .pts small { font-size:.5em; color:#999; }
+  .bar { grid-column:1/-1; height:8px; background:#f1e6cc; border-radius:4px; overflow:hidden; }
+  .bar i { display:block; height:100%; background:#2f8a4a; }
+  .empty { text-align:center; font-size:20px; color:#8a6a2e; padding:40px 0; }
+  @media (max-width:520px) { .row { grid-template-columns:44px 1fr 90px; padding:10px 12px; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>🏆 ตารางคะแนน ปริศนาศาสตร์พระราชา</h1>
+  <div class="sub" id="sub">กำลังโหลด...</div>
+  <div id="list"></div>
+</div>
+<script src="riddles.js"></script>
+<script>
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const medal = ['🥇','🥈','🥉'];
+async function load() {
+  const sub = document.getElementById('sub'), box = document.getElementById('list');
+  if (!API_URL) { sub.textContent = 'ครูยังไม่ได้ตั้งค่า API_URL ในไฟล์ riddles.js'; return; }
+  try {
+    const data = await (await fetch(API_URL + '?t=' + Date.now())).json();
+    const list = data.list.sort((a, b) => b.score - a.score || a.time - b.time);
+    sub.textContent = `ส่งแล้ว ${list.length} กลุ่ม · อัปเดตอัตโนมัติทุก 10 วินาที`;
+    if (!list.length) { box.innerHTML = '<div class="empty">ยังไม่มีกลุ่มส่งคำตอบ</div>'; return; }
+    box.innerHTML = list.map((g, i) => {
+      const t = new Date(g.time).toLocaleTimeString('th-TH', { hour:'2-digit', minute:'2-digit', second:'2-digit' });
+      return `<div class="row r${i + 1}"><div class="rank">${medal[i] || i + 1}</div>
+        <div class="name">${esc(g.group)}<div class="time">ส่งเมื่อ ${t}</div></div>
+        <div class="pts">${g.score}<small> / ${data.total}</small></div>
+        <div class="bar"><i style="width:${g.score / data.total * 100}%"></i></div></div>`;
+    }).join('');
+  } catch (e) { sub.textContent = 'โหลดคะแนนไม่สำเร็จ จะลองใหม่อัตโนมัติ'; }
+}
+load(); setInterval(load, 10000);
+</script>
+</body>
+</html>

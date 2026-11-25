@@ -8,34 +8,121 @@
 <style>
   * { box-sizing: border-box; }
   body { margin:0; min-height:100vh; font-family:'Sarabun',sans-serif; color:#2b2112;
-         background:linear-gradient(160deg,#fff7e0,#f3dca4); display:flex; align-items:center; justify-content:center; padding:20px 16px; }
-  .card { width:100%; max-width:520px; background:#fff; border-radius:22px; padding:28px 22px; text-align:center;
+         background:linear-gradient(160deg,#fff7e0,#f3dca4); display:flex; align-items:flex-start; justify-content:center; padding:20px 16px 40px; }
+  .card { width:100%; max-width:520px; background:#fff; border-radius:22px; padding:24px 20px; text-align:center;
           box-shadow:0 10px 30px rgba(120,80,10,.18); border-top:8px solid #c9962b; }
-  .tag { font-size:16px; color:#8a6a2e; letter-spacing:.5px; }
-  .num { font-size:72px; font-weight:800; color:#c9962b; line-height:1; margin:4px 0 14px; }
-  .riddle { font-size:22px; line-height:1.65; margin:0 0 22px; }
-  .hint { background:#fff4d6; border-radius:12px; padding:12px; font-size:17px; }
-  .hint b { color:#a8741a; }
-  .err { font-size:20px; }
+  .tag { font-size:15px; color:#8a6a2e; }
+  .num { font-size:64px; font-weight:800; color:#c9962b; line-height:1; margin:2px 0 12px; }
+  .riddle { font-size:20px; line-height:1.6; margin:0 0 18px; }
+  .choices { display:grid; gap:10px; }
+  .choice { font:inherit; font-size:18px; text-align:left; padding:14px 16px; border-radius:14px; border:2px solid #e6d3a6;
+            background:#fffaf0; color:#2b2112; cursor:pointer; display:flex; gap:10px; align-items:center; }
+  .choice b { flex:none; width:30px; height:30px; border-radius:50%; background:#c9962b; color:#fff; display:grid; place-items:center; font-size:16px; }
+  .choice:disabled { cursor:default; opacity:.55; }
+  .choice.picked { opacity:1; border-color:#2f8a4a; background:#eaf7ee; }
+  .choice.picked b { background:#2f8a4a; }
+  .msg { margin-top:14px; font-size:17px; font-weight:700; color:#2f8a4a; min-height:1.5em; }
+  .progress { margin-top:18px; padding-top:14px; border-top:1px dashed #e6d3a6; }
+  .progress h3 { margin:0 0 8px; font-size:16px; color:#8a6a2e; }
+  .dots { display:grid; grid-template-columns:repeat(10,1fr); gap:6px; }
+  .dot { aspect-ratio:1; border-radius:8px; background:#f1e6cc; color:#a08850; font-size:13px; font-weight:700; display:grid; place-items:center; }
+  .dot.done { background:#2f8a4a; color:#fff; }
+  .dot.here { outline:3px solid #c9962b; outline-offset:1px; }
+  .finish { margin-top:18px; padding:16px; border-radius:16px; background:#fff4d6; }
+  .finish h2 { margin:0 0 8px; font-size:22px; }
+  .finish input { font:inherit; font-size:18px; width:100%; padding:12px; border-radius:10px; border:2px solid #e6d3a6; margin:8px 0; }
+  .btn { font:inherit; font-size:18px; font-weight:800; width:100%; padding:13px; border:0; border-radius:12px; background:#c9962b; color:#fff; cursor:pointer; }
+  .btn:disabled { opacity:.6; }
+  .score { font-size:56px; font-weight:800; color:#2f8a4a; line-height:1.1; }
+  .err { color:#b3261e; font-weight:700; margin-top:8px; }
+  a { color:#a8741a; }
 </style>
 </head>
 <body>
 <div class="card" id="card"></div>
 <script src="riddles.js"></script>
 <script>
-  const n = parseInt(new URLSearchParams(location.search).get('n'), 10);
-  const card = document.getElementById('card');
-  if (n >= 1 && n <= RIDDLES.length) {
-    document.title = 'ปริศนาข้อที่ ' + n;
-    card.innerHTML =
-      '<div class="tag">ปริศนาศาสตร์พระราชา · ฐานที่</div>' +
-      '<div class="num">' + n + '</div>' +
-      '<p class="riddle"></p>' +
-      '<div class="hint">✏️ ไปตอบ <b>ข้อที่ ' + n + '</b> ใน Wayground</div>';
-    card.querySelector('.riddle').textContent = RIDDLES[n - 1];
+const KEY = 'r60riddle.answers', SENT = 'r60riddle.sent', TOTAL = QUESTIONS.length;
+const params = new URLSearchParams(location.search);
+const n = parseInt(params.get('n'), 10);
+const card = document.getElementById('card');
+
+function load(k, d) { try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch (e) { return d; } }
+function save(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+if (params.get('reset') === '1' && confirm('ล้างคำตอบทั้งหมดในเครื่องนี้ เพื่อเริ่มเล่นใหม่?')) {
+  try { localStorage.removeItem(KEY); localStorage.removeItem(SENT); } catch (e) {}
+  location.replace(location.pathname);
+}
+
+let answers = load(KEY, {});
+const doneCount = () => Object.keys(answers).length;
+
+function progressHtml() {
+  let dots = '';
+  for (let i = 1; i <= TOTAL; i++)
+    dots += `<div class="dot ${answers[i] !== undefined ? 'done' : ''} ${i === n ? 'here' : ''}">${i}</div>`;
+  return `<div class="progress"><h3>ตอบแล้ว ${doneCount()} / ${TOTAL} ฐาน</h3><div class="dots">${dots}</div></div>`;
+}
+
+function finishHtml() {
+  const sent = load(SENT, null);
+  if (sent) return `<div class="finish"><h2>🎉 กลุ่ม ${esc(sent.group)}</h2>
+      <div>ส่งคำตอบเรียบร้อยแล้ว ได้คะแนน</div><div class="score">${sent.score} / ${sent.total}</div>
+      <p><a href="scoreboard.html">ดูตารางคะแนนรวม</a></p></div>`;
+  if (doneCount() < TOTAL) return '';
+  return `<div class="finish"><h2>🎉 ครบ 20 ฐานแล้ว!</h2>
+      <div>พิมพ์ชื่อกลุ่มแล้วกดส่งคำตอบ (ส่งได้ครั้งเดียว)</div>
+      <input id="group" maxlength="40" placeholder="ชื่อกลุ่ม เช่น กลุ่ม 1 ม.4/2">
+      <button class="btn" id="send">ส่งคำตอบ</button><div class="err" id="err"></div></div>`;
+}
+
+function render() {
+  let top = '';
+  if (n >= 1 && n <= TOTAL) {
+    const q = QUESTIONS[n - 1], picked = answers[n];
+    const btns = q.o.map((t, i) => `<button class="choice ${picked === i ? 'picked' : ''}" data-i="${i}" ${picked !== undefined ? 'disabled' : ''}>
+        <b>${'กขคง'[i]}</b><span>${esc(t)}</span></button>`).join('');
+    top = `<div class="tag">ปริศนาศาสตร์พระราชา · ฐานที่</div><div class="num">${n}</div>
+      <p class="riddle">${esc(q.r)}</p><div class="choices">${btns}</div>
+      <div class="msg">${picked !== undefined ? '✔ บันทึกคำตอบแล้ว ไปฐานต่อไปได้เลย' : ''}</div>`;
   } else {
-    card.innerHTML = '<div class="num">🔍</div><p class="err">สแกน QR Code ที่ฐานเพื่ออ่านปริศนา</p>';
+    top = `<div class="tag">ปริศนาศาสตร์พระราชา</div><div class="num">🔍</div>
+      <p class="riddle">เดินไปตามฐาน แล้วสแกน QR Code เพื่ออ่านปริศนาและเลือกคำตอบ</p>`;
   }
+  card.innerHTML = top + finishHtml() + progressHtml();
+
+  card.querySelectorAll('.choice:not(:disabled)').forEach(b => b.onclick = () => {
+    const i = +b.dataset.i;
+    if (!confirm(`ยืนยันคำตอบ "${q_text(i)}" ?\n(เปลี่ยนคำตอบไม่ได้)`)) return;
+    answers[n] = i; save(KEY, answers); render();
+  });
+  const send = document.getElementById('send');
+  if (send) send.onclick = submit;
+}
+const q_text = i => QUESTIONS[n - 1].o[i];
+
+async function submit() {
+  const group = document.getElementById('group').value.trim();
+  const err = document.getElementById('err'), btn = document.getElementById('send');
+  if (!group) { err.textContent = 'กรุณาพิมพ์ชื่อกลุ่ม'; return; }
+  if (!API_URL) { err.textContent = 'ครูยังไม่ได้ตั้งค่าระบบส่งคะแนน (API_URL)'; return; }
+  btn.disabled = true; btn.textContent = 'กำลังส่ง...'; err.textContent = '';
+  const list = []; for (let i = 1; i <= TOTAL; i++) list.push(answers[i]);
+  try {
+    const res = await fetch(API_URL, { method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'},
+                                       body: JSON.stringify({ group, answers: list }) });
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.error || 'ส่งไม่สำเร็จ');
+    save(SENT, { group, score: data.score, total: data.total });
+    render();
+  } catch (e) {
+    err.textContent = e.message || 'ส่งไม่สำเร็จ ลองใหม่อีกครั้ง';
+    btn.disabled = false; btn.textContent = 'ส่งคำตอบ';
+  }
+}
+render();
 </script>
 </body>
 </html>
