@@ -24,6 +24,13 @@
   .bar { grid-column:1/-1; height:8px; background:#f1e6cc; border-radius:4px; overflow:hidden; }
   .bar i { display:block; height:100%; background:#2f8a4a; }
   .empty { text-align:center; font-size:20px; color:#8a6a2e; padding:40px 0; }
+  .del { display:none; font:inherit; font-size:15px; font-weight:700; margin-top:4px; padding:4px 12px; border:0; border-radius:8px;
+         background:#fde3e1; color:#b3261e; cursor:pointer; }
+  body.admin .del { display:inline-block; }
+  .adminbar { margin-top:24px; text-align:center; }
+  .adminbar button { font:inherit; font-size:15px; padding:8px 16px; border-radius:10px; border:1px solid #d9c9a3; background:#fff; color:#8a6a2e; cursor:pointer; margin:4px; }
+  .adminbar .danger { background:#b3261e; color:#fff; border:0; font-weight:700; }
+  .only-admin { display:none; } body.admin .only-admin { display:inline-block; } body.admin .only-guest { display:none; }
   @media (max-width:520px) { .row { grid-template-columns:34px minmax(0,1fr) 72px; gap:8px; padding:10px 12px; } }
 </style>
 </head>
@@ -32,6 +39,11 @@
   <h1>🏆 ตารางคะแนน ปริศนาศาสตร์พระราชา</h1>
   <div class="sub" id="sub">กำลังโหลด...</div>
   <div id="list"></div>
+  <div class="adminbar">
+    <button class="only-guest" id="login">🔒 โหมดครู (ลบคะแนน)</button>
+    <button class="only-admin danger" id="clear">🗑 ลบคะแนนทั้งหมด</button>
+    <button class="only-admin" id="logout">ออกจากโหมดครู</button>
+  </div>
 </div>
 <script src="riddles.js?v=3"></script>
 <script>
@@ -48,12 +60,53 @@ async function load() {
     box.innerHTML = list.map((g, i) => {
       const t = new Date(g.time).toLocaleTimeString('th-TH', { hour:'2-digit', minute:'2-digit', second:'2-digit' });
       return `<div class="row r${i + 1}"><div class="rank">${medal[i] || i + 1}</div>
-        <div class="name">${esc(g.group)}<div class="time">ส่งเมื่อ ${t}</div></div>
+        <div class="name">${esc(g.group)}<div class="time">ส่งเมื่อ ${t}</div>
+          <button class="del" data-time="${g.time}" data-group="${esc(g.group)}">🗑 ลบ</button></div>
         <div class="pts">${g.score}<small> / ${data.total}</small></div>
         <div class="bar"><i style="width:${g.score / data.total * 100}%"></i></div></div>`;
     }).join('');
   } catch (e) { sub.textContent = 'โหลดคะแนนไม่สำเร็จ จะลองใหม่อัตโนมัติ'; }
 }
+// ===== โหมดครู: ลบคะแนน (ตรวจรหัสที่ Apps Script) =====
+let adminPw = null;
+try { adminPw = sessionStorage.getItem('r60riddle.pw'); } catch (e) {}
+const setAdmin = pw => {
+  adminPw = pw;
+  try { pw ? sessionStorage.setItem('r60riddle.pw', pw) : sessionStorage.removeItem('r60riddle.pw'); } catch (e) {}
+  document.body.classList.toggle('admin', !!pw);
+};
+setAdmin(adminPw);
+
+async function adminCall(payload) {
+  const res = await fetch(API_URL, { method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'},
+                                     body: JSON.stringify(Object.assign({ password: adminPw }, payload)) });
+  const data = await res.json();
+  if (!data.ok) throw new Error(data.error || 'ไม่สำเร็จ');
+  return data;
+}
+
+document.getElementById('login').onclick = async () => {
+  const pw = prompt('ใส่รหัสครู');
+  if (!pw) return;
+  adminPw = pw;
+  try { await adminCall({ action:'login' }); setAdmin(pw); }
+  catch (e) { adminPw = null; alert(e.message); }
+};
+document.getElementById('logout').onclick = () => setAdmin(null);
+document.getElementById('clear').onclick = async () => {
+  if (!confirm('ลบคะแนนทุกกลุ่ม? กู้คืนไม่ได้')) return;
+  if (prompt('พิมพ์คำว่า ลบทั้งหมด เพื่อยืนยัน') !== 'ลบทั้งหมด') return;
+  try { await adminCall({ action:'clear' }); load(); } catch (e) { alert(e.message); }
+};
+document.getElementById('list').addEventListener('click', async ev => {
+  const b = ev.target.closest('.del');
+  if (!b) return;
+  if (!confirm(`ลบคะแนนของกลุ่ม "${b.dataset.group}"? กู้คืนไม่ได้`)) return;
+  b.disabled = true; b.textContent = 'กำลังลบ...';
+  try { await adminCall({ action:'delete', time: b.dataset.time, group: b.dataset.group }); load(); }
+  catch (e) { alert(e.message); b.disabled = false; b.textContent = '🗑 ลบ'; }
+});
+
 load(); setInterval(load, 10000);
 </script>
 </body>
