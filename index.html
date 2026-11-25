@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ปริศนาศาสตร์พระราชา</title>
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700;800&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  body { margin:0; min-height:100vh; font-family:'Sarabun',sans-serif; color:#2b2112;
+         background:linear-gradient(160deg,#fff7e0,#f3dca4); display:flex; align-items:center; justify-content:center; padding:20px 16px; }
+  .card { width:100%; max-width:520px; background:#fff; border-radius:22px; padding:28px 22px; text-align:center;
+          box-shadow:0 10px 30px rgba(120,80,10,.18); border-top:8px solid #c9962b; }
+  .tag { font-size:16px; color:#8a6a2e; letter-spacing:.5px; }
+  .num { font-size:72px; font-weight:800; color:#c9962b; line-height:1; margin:4px 0 14px; }
+  .riddle { font-size:22px; line-height:1.65; margin:0 0 22px; }
+  .hint { background:#fff4d6; border-radius:12px; padding:12px; font-size:17px; }
+  .hint b { color:#a8741a; }
+  .err { font-size:20px; }
+</style>
+</head>
+<body>
+<div class="card" id="card"></div>
+<script src="riddles.js"></script>
+<script>
+  const n = parseInt(new URLSearchParams(location.search).get('n'), 10);
+  const card = document.getElementById('card');
+  if (n >= 1 && n <= RIDDLES.length) {
+    document.title = 'ปริศนาข้อที่ ' + n;
+    card.innerHTML =
+      '<div class="tag">ปริศนาศาสตร์พระราชา · ฐานที่</div>' +
+      '<div class="num">' + n + '</div>' +
+      '<p class="riddle"></p>' +
+      '<div class="hint">✏️ ไปตอบ <b>ข้อที่ ' + n + '</b> ใน Wayground</div>';
+    card.querySelector('.riddle').textContent = RIDDLES[n - 1];
+  } else {
+    card.innerHTML = '<div class="num">🔍</div><p class="err">สแกน QR Code ที่ฐานเพื่ออ่านปริศนา</p>';
+  }
+</script>
+</body>
+</html>
